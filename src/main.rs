@@ -1,3 +1,6 @@
+mod day_1;
+mod read_lines;
+
 fn main() {
-    println!("Hello, world!");
+	day_1::run()
 }
