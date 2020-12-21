@@ -1,8 +1,10 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashMap;
 
 use crate::read_lines::read_day;
 
-fn read_bags() -> HashMap<String, Vec<String>> {
+type BagMap = HashMap<String, Vec<(usize, String)>>;
+
+fn read_bags() -> BagMap {
 	let lines = read_day(7).map(|l| l.unwrap());
 	let mut bag_map = HashMap::new();
 
@@ -13,71 +15,62 @@ fn read_bags() -> HashMap<String, Vec<String>> {
 	bag_map
 }
 
-fn read_bag(line: String, bag_map: &mut HashMap<String, Vec<String>>) {
-	let mut words = line.split(" ");
-	let mut current_bag = Vec::new();
+fn read_bag(line: String, bag_map: &mut BagMap) {
+	let words: Vec<&str> = line.split(" ").collect();
 
-	while let Some(word) = words.next() {
-		if word == "bags" {
-			break;
+	let bag_name = words[0..2].join(" ");
+
+	let mut bag_vec = Vec::new();
+
+	for i in (4..words.len()).step_by(4) {
+		let sub_bag = words[i+1..i+3].join(" ");
+
+		if sub_bag != "other bags." {
+			bag_vec.push((words[i].parse().unwrap() ,sub_bag));
 		}
-
-		current_bag.push(word);
 	}
 
-	let current_bag = current_bag.join(" ");
-	if let None = bag_map.get(&current_bag) {
-		bag_map.insert(current_bag.clone(), Vec::new());
-	}
-
-	let mut contained_bag = Vec::new();
-	while let Some(word) = words.next() {
-		if let Ok(_) =  word.parse::<usize>() {
-			continue;
-		}
-
-		if word == "bags," || word == "bags." {
-			let bag = contained_bag.join(" ");
-			if bag != "contain no other" {
-				if bag_map.contains_key(&bag) {
-					println!("psuh");
-					let bag = bag_map.get_mut(&bag).unwrap();
-					bag.push(current_bag.clone())
-				} else {
-					println!("insert");
-					bag_map.insert(bag, vec![current_bag.clone()]);
-				}
-			}
-			
-			contained_bag.clear();
-			continue;
-		}
-
-		contained_bag.push(word);
-	}
+	bag_map.insert(bag_name, bag_vec);
 }
 
-fn count_parents(bag: &str, bag_map: HashMap<String, Vec<String>> ) -> usize {
-	let mut result : HashSet<&String> = bag_map[bag].iter().collect();
-	let mut queue : VecDeque<&String> = result.iter().cloned().collect();
-
-	while let Some(bag) = queue.pop_back() {
-		let bag = &bag_map[bag];
-		let other : HashSet<&String> = bag.iter().collect();
-
-		let diff : Vec<&String> = other.difference(&result).cloned().collect();
-		for bag_name in diff {
-			queue.push_front(bag_name);
-			result.insert(bag_name);
+fn count_parents(bag: &str, bag_map: &BagMap ) -> usize {
+	let mut count = 0;
+	for target_bag in bag_map {
+		if is_bag_in_target(&target_bag.0, bag, &bag_map) {
+			count += 1;
 		}
 	}
 
-	result.len()
+	count
+}
+
+//search for bag in target
+fn is_bag_in_target(target: &String, bag: &str, bag_map: &BagMap, ) -> bool {
+	//println!("{}", target);
+	if let Some(_) = bag_map[target].iter().find(|x| x.1 == bag) {
+		return true;
+	}
+
+	for bag_tup in &bag_map[target] {
+	
+		if is_bag_in_target(&bag_tup.1, bag, &bag_map) {
+			return true;
+		}
+	}
+	false
+}
+
+fn count_children(this_bag: &str, bag_map: &BagMap) -> usize {
+	let this_bag = &bag_map[this_bag];
+	this_bag.iter().map(|b| b.0 + b.0 * count_children(&b.1, bag_map)).sum::<usize>()
 }
 
 pub fn run() {
 	let bag_map = read_bags();
-	
-	let count = count_parents("shiny gold", bag_map);
-	println!("Number of bags that can hold yours:{}", count)
+
+	let count = count_parents("shiny gold", &bag_map);
+	println!("Number of bags that can hold yours:{}", count);
+
+	let count = count_children("shiny gold", &bag_map);
+	println!("Number of bags in your bag:{}", count);
 }
