@@ -9,7 +9,7 @@ pub fn read_day(day_number: usize) -> io::Lines<io::BufReader<File>> {
 	match read_lines(puzzle_path) {
 		Ok(lines) => lines,
 		Err(error) => {
-			eprintln!("Failed to load input:{}", error);
+			eprintln!("Failed to load input: {}", error);
 			panic!();
 		}
 	}
