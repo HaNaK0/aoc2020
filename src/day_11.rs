@@ -1,3 +1,5 @@
+use vector2d::Vector2D;
+
 use crate::read_lines::{read_day};
 
 const MAP_WIDTH : usize = 98;
@@ -30,60 +32,59 @@ fn read_seats() -> SeatMap{
 	map
 }
 
-fn get_neighbors(index: usize, map: &SeatMap) -> SeatMap {
-	let relative_neigbors = [(-1,-1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
-	let xy_pos = ((index % MAP_WIDTH) as i32, (index / MAP_WIDTH) as i32);
-	let indecies = relative_neigbors.iter().
-		map(|p| (xy_pos.0 + p.0, xy_pos.1 + p.1)).
-		filter(|p| p.0 >= 0 && p.1 >= 0 && p.0 < MAP_WIDTH as i32 && p.1 < MAP_WIDTH as i32).
-		map(|p| p.0 as usize + p.1 as usize * MAP_WIDTH);
+fn get_neighbors(index: usize, map: &SeatMap) -> Vec<usize> {
+	let dirs = [
+		Vector2D::new(0, -1),
+		Vector2D::new(0, 1), 
+		Vector2D::new(1, -1),
+		Vector2D::new(-1, 1), 
+		Vector2D::new(-1,-1),
+		Vector2D::new(1, 1),
+		Vector2D::new(1, 0),
+		Vector2D::new(-1, 0),
+	];
 
-	indecies.map(|i| map[i]).collect()
+	let xy_pos = Vector2D::new((index % MAP_WIDTH) as i32, (index / MAP_WIDTH) as i32);
+
+	let indecies = dirs.iter().filter_map(|v| cast_ray(xy_pos, *v, map));
+
+	indecies.collect()
+}
+
+fn cast_ray(start: Vector2D<i32>, dir: Vector2D<i32>, map: &SeatMap) -> Option<usize> {
+
+	for i in 0..MAP_WIDTH{
+		let current_pos: Vector2D<i32> = start + dir * i as i32;
+
+		if current_pos.x >= MAP_WIDTH as i32 || current_pos.x < 0 || current_pos.y >= MAP_WIDTH as i32 || current_pos.y < 0 {
+			return None;
+		}
+
+		let index = current_pos.x + current_pos.y * MAP_WIDTH as i32;
+
+		if map[index as usize] != SeatStatus::Floor {
+			return Some(index as usize);
+		}
+	}
+
+	panic!()
 }
 
 // Returns the next iteration of the game if a change
-fn get_next_iter(prev: &SeatMap) -> Option<SeatMap> {
-	let mut change = false;
-	let iter = prev.iter().
-		enumerate().
-		map(|s| {
-			let neighbors = get_neighbors(s.0, prev);
-			match s.1 {
-			    SeatStatus::Free => {
-					let taken_neigbors = neighbors.iter().filter(|&&s| s == SeatStatus::Taken);
-					if taken_neigbors.count() == 0 {
-						change = true; 
-						SeatStatus::Taken
-					} else {
-						SeatStatus::Free
-					}
-				}
-			    SeatStatus::Taken => {
-					let taken_neigbors = neighbors.iter().filter(|&&s| s == SeatStatus::Taken);
-					if taken_neigbors.count() >= 4 {
-						change = true;
-						SeatStatus::Free
-					} else {
-						SeatStatus::Taken
-					}
-				}
-			    SeatStatus::Floor => SeatStatus::Floor 
-			}
-		});
-		
-		let new_map = iter.collect();
+fn get_next_iter(prev: &SeatMap, neighbors: &Vec<Vec<usize>>) -> Option<SeatMap> {
+	let mut new_map = 
 
-		if change {
-			Some(new_map)
-		} else {
-			None
-		}
+	todo!()
 }
 
 pub(crate) fn run() -> () {
 	let mut seats = read_seats();
+	println!("Seats loaded");
 
-	while let Some(next) = get_next_iter(&seats) {
+	let seat_neigbors: Vec<Vec<usize>> = (0..seats.len()).map(|i| get_neighbors(i, &seats)).collect();
+	println!("Neigbors Found");
+
+	while let Some(next) = get_next_iter(&seats, &seat_neigbors) {
 		seats = next;
 	}
 	
